@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UserService } from '../user/user.service';
 import { JwtPayload } from './jwt.payload';
-import { AuthDto } from './dto/auth.dto'
+import { AuthDto } from './dto/auth.dto';
 import { User } from '../user/user.entity';
 import * as bcrypt from 'bcryptjs';
 import { CreateUserDto } from '../user/dto/create-user.dto';
@@ -16,24 +16,38 @@ export class AuthService {
   ) {}
 
   async validateUser(email: string, password: string): Promise<any> {
-    const user = await this.userService.findByEmail(email);
-    if (user && (await bcrypt.compare(password, user.password))) {
-      const { password, ...result } = user;
-      return result;
+    try {
+      const user = await this.userService.findByEmail(email);
+      if (user && (await bcrypt.compare(password, user.password))) {
+        const { password, ...result } = user;
+        return result;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error validating user:', error);
+      throw new Error('Failed to validate user');
     }
-    return null;
   }
 
   async login(user: any) {
-    const payload: JwtPayload = { email: user.email, sub: user.id, role: user.role };
-    return {
-      access_token: this.jwtService.sign(payload),
-    };
+    try {
+      const payload: JwtPayload = { email: user.email, sub: user.id, role: user.role };
+      return {
+        access_token: this.jwtService.sign(payload),
+      };
+    } catch (error) {
+      console.error('Error during login:', error);
+      throw new Error('Failed to login');
+    }
   }
 
   async register(userDto: CreateUserDto, role: UserRole = UserRole.PARTICIPANT) {
-    const hashedPassword = await bcrypt.hash(userDto.password, 10);
-    return this.userService.create({ ...userDto, password: hashedPassword, role });
+    try {
+      const hashedPassword = await bcrypt.hash(userDto.password, 10);
+      return await this.userService.create({ ...userDto, password: hashedPassword, role });
+    } catch (error) {
+      console.error('Error during registration:', error);
+      throw new Error('Failed to register user');
+    }
   }
-
 }
